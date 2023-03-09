@@ -7,7 +7,7 @@ from PyQt5.QtWidgets import QApplication, QWidget, QVBoxLayout, QLabel, QScrollA
 
 from ImageTextLabel import ImageTextLabel
 from labelPushButtonItem import LabelPushButtonItem
-from writeLog import WriteLog
+from writeTxt import Log, ChatLog
 
 
 class MainWindow(QMainWindow):
@@ -15,7 +15,7 @@ class MainWindow(QMainWindow):
         super().__init__()
 
         # 创建日志类
-        self.log = WriteLog()
+        self.log = Log()
 
         # 设置窗口标志
         self.setWindowFlags(Qt.Window | Qt.CustomizeWindowHint | Qt.WindowTitleHint)

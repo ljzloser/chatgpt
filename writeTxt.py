@@ -1,8 +1,9 @@
 import datetime
+import json
 import os
 
 
-class WriteLog:
+class Log:
     def __init__(self):
         self.logName = ''
         self.write('********************开始写入日志文件********************\n')
@@ -18,3 +19,21 @@ class WriteLog:
 
     def read(self, date: str):
         pass
+
+
+class ChatLog:
+    def __init__(self, filename):
+        self.chatName = filename
+
+    def write(self, role, content):
+        datadict = {"role": role, "content": content}
+        data = json.dumps(self.datadict) + '\n'
+        with open(file=self.logName, mode='a', encoding='UTF-8') as f:
+            f.write(data)
+            f.close()
+
+    def read(self) -> list:
+        with open(file=self.logName, mode='r', encoding='UTF-8') as f:
+            chatList = [json.dumps(d) for d in f.read().split('\n')]
+            f.close()
+            return chatList
