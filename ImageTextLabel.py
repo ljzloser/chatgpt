@@ -4,9 +4,10 @@ from PyQt5.QtWidgets import QWidget, QHBoxLayout, QLabel, QSizePolicy
 
 
 class ImageTextLabel(QWidget):
-    def __init__(self, parent=None):
+    def __init__(self, name, parent=None):
         super().__init__(parent)
-
+        # 当前用户名
+        self.name = name
         # 创建左侧QLabel，用于显示图片
         self.image_label = QLabel(self)
         self.image_label.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Expanding)
@@ -24,7 +25,7 @@ class ImageTextLabel(QWidget):
         layout.addWidget(self.text_label)
 
         # 设置布局的边距和间距
-        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setContentsMargins(0, 0, 20, 0)
         layout.setSpacing(10)
 
     def set_image(self, image_path):

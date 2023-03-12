@@ -1,0 +1,1 @@
+python F:\chatgpt\main.py

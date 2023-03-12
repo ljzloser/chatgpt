@@ -23,17 +23,24 @@ class Log:
 
 class ChatLog:
     def __init__(self, filename):
-        self.chatName = filename
+        self.chatName = f'Chat/{filename}.txt'
 
     def write(self, role, content):
         datadict = {"role": role, "content": content}
-        data = json.dumps(self.datadict) + '\n'
-        with open(file=self.logName, mode='a', encoding='UTF-8') as f:
+        data = json.dumps(datadict) + '\n'
+        with open(file=self.chatName, mode='a', encoding='UTF-8') as f:
             f.write(data)
             f.close()
 
     def read(self) -> list:
-        with open(file=self.logName, mode='r', encoding='UTF-8') as f:
-            chatList = [json.dumps(d) for d in f.read().split('\n')]
+        with open(file=self.chatName, mode='r', encoding='UTF-8') as f:
+            chatList = []
+            for d in f.read().split('\n'):
+                if d != '':
+                    s = json.loads(d)
+                    chatList.append(s)
             f.close()
             return chatList
+
+    def delete(self):
+        os.remove(self.chatName)
