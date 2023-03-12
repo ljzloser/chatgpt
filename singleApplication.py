@@ -1,16 +1,15 @@
-from PyQt5.QtCore import QTextStream, QFileInfo, pyqtSignal, Qt
+from PyQt5.QtCore import QTextStream, QFileInfo, Qt
 from PyQt5.QtNetwork import QLocalServer, QLocalSocket
 from PyQt5.QtWidgets import QApplication, QMainWindow, QMessageBox
 
 
 class SingleApplication(QApplication):
-    instanceRunning = pyqtSignal()
 
     def __init__(self, *args, **kwargs):
         super(SingleApplication, self).__init__(*args, **kwargs)
         self.localServer = None
         self.mainWindow: QMainWindow
-
+        self.instanceRunning = False
         # 一般来说是取引用程序名作为 localServer 的进程服务名
         # 目前程序的进程名是根据文件名来的，但是一旦用于更改了文件名，那么进程名就不准确了，
         # 所以通过文件名来判断是进程服务是不可靠的，应该写死在代码里
@@ -38,9 +37,6 @@ class SingleApplication(QApplication):
         else:
             self.newLocalServer()
         socket.close()
-        if instanceRunning:
-            self.instanceRunning.emit()
-            self.quit()
 
     # 创建LocalServer
     def newLocalServer(self):

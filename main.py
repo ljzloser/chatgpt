@@ -11,7 +11,7 @@ if __name__ == '__main__':
     # 设置任务栏图标
     ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID("myappid")
     app = SingleApplication(sys.argv)
-    if not app.initLocalConnection():
+    if not app.instanceRunning:
         window = MainWindow()
         app.mainWindow = window
         app.setQuitOnLastWindowClosed(False)

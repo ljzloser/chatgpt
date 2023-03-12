@@ -1,18 +1,18 @@
 import datetime
-import json
 import os
 import re
 
 # import requests
-from PyQt5.QtCore import Qt, QThread, pyqtSignal, QUrl, QEventLoop, QTimer, QCoreApplication
+from PyQt5.QtCore import Qt, pyqtSignal, QTimer, QCoreApplication
 from PyQt5.QtGui import QIcon, QCursor
-from PyQt5.QtNetwork import QNetworkRequest, QNetworkAccessManager, QNetworkReply
 from PyQt5.QtWidgets import QWidget, QVBoxLayout, QLabel, QScrollArea, QLineEdit, QMainWindow, \
     QAction, QHBoxLayout, QListWidget, QMessageBox, QListWidgetItem, QSystemTrayIcon, QMenu
 
 from ImageTextLabel import ImageTextLabel
 from configXml import Config
+from imageChatWidget import ImageChatWidget
 from labelPushButtonItem import LabelPushButtonItem
+from requestThread import RequestThread
 from set import Set
 from writeTxt import Log, ChatLog
 
@@ -28,68 +28,24 @@ def get_max_chat_number():
     # 找到最大的数字并返回
     return max(numbers)
 
-
-class RequestThread(QThread):
-    showError = pyqtSignal(str)
-    returnResult = pyqtSignal(str)
-
-    def __init__(self):
-        super().__init__()
-        config = Config()
-        key = config.read('key')
-        self.result = ''
-        self.key = f'Bearer {key}'
-        self.json_Data = {}
-        self.url = 'https://api.openai.com/v1/chat/completions'
-
-    def setJson(self, dataJson):
-        self.json_Data = dataJson
-
-    def run(self):
-        try:
-            manager = QNetworkAccessManager()
-            request = QNetworkRequest(QUrl(self.url))
-            request.setHeader(QNetworkRequest.ContentTypeHeader, 'application/json')
-            request.setRawHeader(b'Authorization', self.key.encode())
-            reply = manager.post(request, json.dumps(self.json_Data).encode())
-            # 等待请求完成
-            loop = QEventLoop()
-            reply.finished.connect(loop.quit)
-            loop.exec_()
-            # 处理响应
-            if reply.error() == QNetworkReply.NoError:
-                resultJson = json.loads(reply.readAll().data().decode('utf-8'))
-                self.result = resultJson['choices'][0]['message']['content']
-                self.returnResult.emit(self.result)
-            else:
-                resultJson = json.loads(reply.readAll().data().decode('utf-8'))
-                if 'error' in resultJson:
-                    if 'message' in resultJson['error']:
-                        self.showError.emit(reply.errorString() + resultJson['error']['message'])
-                    else:
-                        self.showError.emit(reply.errorString() + str(resultJson['error']))
-
-            reply.deleteLater()
-        except Exception as e:
-            self.showError.emit(str(e))
-        # try:
-        #     response = requests.post(url=self.url, json=self.json_Data, headers=self.headers)
-        #     print('ssss')
-        #     if response.status_code == 200:
-        #         resultJson: json = response.json()
-        #         if 'error' in resultJson:
-        #             if 'message' in resultJson['error']:
-        #                 self.showError.emit(resultJson['error']['message'])
-        #             else:
-        #                 self.showError.emit(str(resultJson['error']))
-        #         else:
-        #             self.result = resultJson['choices'][0]['message']['content']
-        #             self.returnResult.emit(self.result)
-        #     else:
-        #         self.showError.emit(f'响应状态码为{response.content}。')
-        # except Exception as e:
-        #     self.showError.emit(str(e))
-        # self.returnResult.emit('你好阿')
+    # try:
+    #     response = requests.post(url=self.url, json=self.json_Data, headers=self.headers)
+    #     print('ssss')
+    #     if response.status_code == 200:
+    #         resultJson: json = response.json()
+    #         if 'error' in resultJson:
+    #             if 'message' in resultJson['error']:
+    #                 self.showError.emit(resultJson['error']['message'])
+    #             else:
+    #                 self.showError.emit(str(resultJson['error']))
+    #         else:
+    #             self.result = resultJson['choices'][0]['message']['content']
+    #             self.returnResult.emit(self.result)
+    #     else:
+    #         self.showError.emit(f'响应状态码为{response.content}。')
+    # except Exception as e:
+    #     self.showError.emit(str(e))
+    # self.returnResult.emit('你好阿')
 
 
 class MainWindow(QMainWindow):
@@ -109,9 +65,13 @@ class MainWindow(QMainWindow):
         self.menu = QMenu(self)
         setAction = QAction("设置", self)
         quitAction = QAction("退出", self)
+        imageAction = QAction("图片", self)
+        self.menu.addAction(imageAction)
         self.menu.addAction(setAction)
         self.menu.addAction(quitAction)
-
+        self.imageChatWidget = ImageChatWidget()
+        self.imageChatWidget.showError.connect(lambda x: self.setDebug(debug=x, isShow=True, isLog=True))
+        imageAction.triggered.connect(lambda: (self.hide(), self.imageChatWidget.show()))
         setAction.triggered.connect(lambda: (self.hide(), self.set.exec()))
         quitAction.triggered.connect(QCoreApplication.quit)
 
@@ -135,7 +95,7 @@ class MainWindow(QMainWindow):
         self.setAttribute(Qt.WA_DeleteOnClose)
 
         # 设置窗口标题
-        self.setWindowTitle("QtChatGpt")
+        self.setWindowTitle("QtChatGpt-Chat")
         # 设置窗口Icon
         self.setWindowIcon(QIcon('res/icon.png'))
         # 创建两个样式表
@@ -215,6 +175,7 @@ class MainWindow(QMainWindow):
         self.timer = QTimer()
         self.timer.timeout.connect(self.threadStats)
         self.timer.start(1)
+        self.beginTime = datetime.datetime.now()
 
     def insert_image_text_label(self, image_path, text, styleSheet, name):
         # 创建一个ImageTextLabel，并设置图片和文本
@@ -238,11 +199,13 @@ class MainWindow(QMainWindow):
 
         self.requestThread.setJson(self.chatJson)
         self.requestThread.start()
+        self.beginTime = datetime.datetime.now()
 
     def show(self) -> None:
         super(MainWindow, self).show()
         scrollbar = self.scroll_area.verticalScrollBar()
         scrollbar.setValue(scrollbar.maximum())
+        self.imageChatWidget.hide()
 
     def setDebug(self, debug: str, isShow: bool, isLog: bool):
         self.titleWidget.setText(f'{datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")} : {debug}')
@@ -313,6 +276,11 @@ class MainWindow(QMainWindow):
 
     def threadStats(self):
         stats = self.requestThread.isRunning()
+        if stats:
+            time = int((datetime.datetime.now() - self.beginTime).total_seconds())
+            self.setWindowTitle(f'正在请求:{time}S')
+        else:
+            self.setWindowTitle("QtChatGpt-Chat")
         self.listWidget.setDisabled(stats)
         self.line_edit.setDisabled(stats)
         self.sendAction.setDisabled(stats)
